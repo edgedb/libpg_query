@@ -66,8 +66,19 @@ typedef struct {
 } PgQueryFingerprintResult;
 
 typedef struct {
+  int location;   /* start offset in query text */
+  int length;     /* length in bytes, or -1 to ignore */
+  int param_id;   /* Param id to use - if negative prefix, need to abs(..) and add highest_extern_param_id */
+  int token;      /* constant token type as reported by lexer */
+  char *val;      /* constant value */
+} PgQueryNormalizeConstLocation;
+
+typedef struct {
   char* normalized_query;
   PgQueryError* error;
+  PgQueryNormalizeConstLocation *clocations;
+  int clocations_count;
+  int highest_extern_param_id;
 } PgQueryNormalizeResult;
 
 // Postgres parser options (parse mode and GUCs that affect parsing)

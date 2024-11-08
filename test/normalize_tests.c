@@ -48,6 +48,8 @@ const char* tests[] = {
   "CLOSE cursor_a",
   "SELECT 1; ALTER USER a WITH PASSWORD 'b'",
   "SELECT $1; ALTER USER a WITH PASSWORD $2",
+  "SELECT U&'d!0061t!+000061' UESCAPE '!'",
+  "SELECT $1",
 };
 
 size_t testsLength = __LINE__ - 7;
