@@ -192,7 +192,7 @@ fill_in_constant_lengths(pgssConstLocations *jstate, const char *query)
 				locs[i].length = (int) strlen(yyextra.core_yy_extra.scanbuf + loc);
 				locs[i].token = tok;
 
-				if (tok == SCONST || tok == FCONST || tok == BCONST || tok == XCONST)
+				if (tok == SCONST || tok == FCONST || tok == BCONST || tok == XCONST || tok == TRUE_P || tok == FALSE_P)
 				{
 					locs[i].val = palloc(strlen(yylval.core_yystype.str) + 1);
 					strcpy(locs[i].val, yylval.core_yystype.str);
@@ -210,6 +210,14 @@ fill_in_constant_lengths(pgssConstLocations *jstate, const char *query)
 
 					locs[i].val = (char *)palloc(buf_size * sizeof(char));
 					snprintf(locs[i].val, buf_size, "%d", val);
+				}
+				else if (tok == NULL_P)
+				{
+					/*
+					 * Do not extract NULL literals as those mess with
+					 * Postgres type inference.
+					 */
+					locs[i].length = -1;
 				}
 
 				break;			/* out of inner for-loop */
