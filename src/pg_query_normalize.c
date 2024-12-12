@@ -58,6 +58,9 @@ typedef struct pgssConstLocations
 
 	/* Should only utility statements be normalized? Set by pg_query_normalize_utility */
 	bool normalize_utility_only;
+
+	/* Should only query statements be normalized? Set by pg_query_normalize */
+	bool normalize_query_only;
 } pgssConstLocations;
 
 /*
@@ -431,34 +434,46 @@ static bool const_record_walker(Node *node, pgssConstLocations *jstate)
 			return const_record_walker((Node *) ((RawStmt *) node)->stmt, jstate);
 		case T_VariableSetStmt:
 			if (jstate->normalize_utility_only) return false;
+            if (jstate->normalize_query_only) return false;
 			return const_record_walker((Node *) ((VariableSetStmt *) node)->args, jstate);
 		case T_CopyStmt:
 			if (jstate->normalize_utility_only) return false;
+            if (jstate->normalize_query_only) return false;
 			return const_record_walker((Node *) ((CopyStmt *) node)->query, jstate);
 		case T_ExplainStmt:
-			return const_record_walker((Node *) ((ExplainStmt *) node)->query, jstate);
+			if (jstate->normalize_query_only) return false;
+            return const_record_walker((Node *) ((ExplainStmt *) node)->query, jstate);
 		case T_CreateRoleStmt:
+            if (jstate->normalize_query_only) return false;
 			return const_record_walker((Node *) ((CreateRoleStmt *) node)->options, jstate);
 		case T_AlterRoleStmt:
-			return const_record_walker((Node *) ((AlterRoleStmt *) node)->options, jstate);
+			if (jstate->normalize_query_only) return false;
+            return const_record_walker((Node *) ((AlterRoleStmt *) node)->options, jstate);
 		case T_DeclareCursorStmt:
 			if (jstate->normalize_utility_only) return false;
+            if (jstate->normalize_query_only) return false;
 			return const_record_walker((Node *) ((DeclareCursorStmt *) node)->query, jstate);
 		case T_CreateFunctionStmt:
 			if (jstate->normalize_utility_only) return false;
+            if (jstate->normalize_query_only) return false;
 			return const_record_walker((Node *) ((CreateFunctionStmt *) node)->options, jstate);
 		case T_DoStmt:
 			if (jstate->normalize_utility_only) return false;
+            if (jstate->normalize_query_only) return false;
 			return const_record_walker((Node *) ((DoStmt *) node)->args, jstate);
 		case T_CreateSubscriptionStmt:
+            if (jstate->normalize_query_only) return false;
 			record_matching_string(jstate, ((CreateSubscriptionStmt *) node)->conninfo);
 			break;
 		case T_AlterSubscriptionStmt:
+            if (jstate->normalize_query_only) return false;
 			record_matching_string(jstate, ((AlterSubscriptionStmt *) node)->conninfo);
 			break;
 		case T_CreateUserMappingStmt:
+            if (jstate->normalize_query_only) return false;
 			return const_record_walker((Node *) ((CreateUserMappingStmt *) node)->options, jstate);
 		case T_AlterUserMappingStmt:
+            if (jstate->normalize_query_only) return false;
 			return const_record_walker((Node *) ((AlterUserMappingStmt *) node)->options, jstate);
 		case T_TypeName:
 			/* Don't normalize constants in typmods or arrayBounds */
@@ -579,25 +594,130 @@ static bool const_record_walker(Node *node, pgssConstLocations *jstate)
 				return false;
 			}
 		case T_MergeStmt:
-			{
-				if (jstate->normalize_utility_only) return false;
-				return raw_expression_tree_walker(node, const_record_walker, (void*) jstate);
-			}
 		case T_InsertStmt:
-			{
-				if (jstate->normalize_utility_only) return false;
-				return raw_expression_tree_walker(node, const_record_walker, (void*) jstate);
-			}
 		case T_UpdateStmt:
-			{
-				if (jstate->normalize_utility_only) return false;
-				return raw_expression_tree_walker(node, const_record_walker, (void*) jstate);
-			}
 		case T_DeleteStmt:
 			{
 				if (jstate->normalize_utility_only) return false;
 				return raw_expression_tree_walker(node, const_record_walker, (void*) jstate);
 			}
+
+        case T_SetOperationStmt:
+        case T_ReturnStmt:
+        case T_PLAssignStmt:
+        case T_CreateSchemaStmt:
+        case T_AlterTableStmt:
+        case T_ReplicaIdentityStmt:
+        case T_AlterTableCmd:
+        case T_AlterCollationStmt:
+        case T_AlterDomainStmt:
+        case T_GrantStmt:
+        case T_ObjectWithArgs:
+        case T_AccessPriv:
+        case T_GrantRoleStmt:
+        case T_AlterDefaultPrivilegesStmt:
+        case T_VariableShowStmt:
+        case T_CreateStmt:
+        case T_Constraint:
+        case T_CreateTableSpaceStmt:
+        case T_DropTableSpaceStmt:
+        case T_AlterTableSpaceOptionsStmt:
+        case T_AlterTableMoveAllStmt:
+        case T_CreateExtensionStmt:
+        case T_AlterExtensionStmt:
+        case T_AlterExtensionContentsStmt:
+        case T_CreateFdwStmt:
+        case T_AlterFdwStmt:
+        case T_CreateForeignServerStmt:
+        case T_AlterForeignServerStmt:
+        case T_CreateForeignTableStmt:
+        case T_DropUserMappingStmt:
+        case T_ImportForeignSchemaStmt:
+        case T_CreatePolicyStmt:
+        case T_AlterPolicyStmt:
+        case T_CreateAmStmt:
+        case T_CreateTrigStmt:
+        case T_CreateEventTrigStmt:
+        case T_AlterEventTrigStmt:
+        case T_CreatePLangStmt:
+        case T_AlterRoleSetStmt:
+        case T_DropRoleStmt:
+        case T_CreateSeqStmt:
+        case T_AlterSeqStmt:
+        case T_DefineStmt:
+        case T_CreateDomainStmt:
+        case T_CreateOpClassStmt:
+        case T_CreateOpClassItem:
+        case T_CreateOpFamilyStmt:
+        case T_AlterOpFamilyStmt:
+        case T_DropStmt:
+        case T_TruncateStmt:
+        case T_CommentStmt:
+        case T_SecLabelStmt:
+        case T_ClosePortalStmt:
+        case T_FetchStmt:
+        case T_IndexStmt:
+        case T_CreateStatsStmt:
+        case T_StatsElem:
+        case T_AlterStatsStmt:
+        case T_FunctionParameter:
+        case T_AlterFunctionStmt:
+        case T_InlineCodeBlock:
+        case T_CallStmt:
+        case T_CallContext:
+        case T_RenameStmt:
+        case T_AlterObjectDependsStmt:
+        case T_AlterObjectSchemaStmt:
+        case T_AlterOwnerStmt:
+        case T_AlterOperatorStmt:
+        case T_AlterTypeStmt:
+        case T_RuleStmt:
+        case T_NotifyStmt:
+        case T_ListenStmt:
+        case T_UnlistenStmt:
+        case T_TransactionStmt:
+        case T_CompositeTypeStmt:
+        case T_CreateEnumStmt:
+        case T_CreateRangeStmt:
+        case T_AlterEnumStmt:
+        case T_ViewStmt:
+        case T_LoadStmt:
+        case T_CreatedbStmt:
+        case T_AlterDatabaseStmt:
+        case T_AlterDatabaseRefreshCollStmt:
+        case T_AlterDatabaseSetStmt:
+        case T_DropdbStmt:
+        case T_AlterSystemStmt:
+        case T_ClusterStmt:
+        case T_VacuumStmt:
+        case T_VacuumRelation:
+        case T_CreateTableAsStmt:
+        case T_RefreshMatViewStmt:
+        case T_CheckPointStmt:
+        case T_DiscardStmt:
+        case T_LockStmt:
+        case T_ConstraintsSetStmt:
+        case T_ReindexStmt:
+        case T_CreateConversionStmt:
+        case T_CreateCastStmt:
+        case T_CreateTransformStmt:
+        case T_PrepareStmt:
+        case T_ExecuteStmt:
+        case T_DeallocateStmt:
+        case T_DropOwnedStmt:
+        case T_ReassignOwnedStmt:
+        case T_AlterTSDictionaryStmt:
+        case T_AlterTSConfigurationStmt:
+        case T_PublicationTable:
+        case T_PublicationObjSpec:
+        case T_CreatePublicationStmt:
+        case T_AlterPublicationStmt:
+        case T_DropSubscriptionStmt:
+        	{
+				if (jstate->normalize_query_only) return false;
+				return raw_expression_tree_walker(node, const_record_walker, (void*) jstate);
+			}
+
 		default:
 			{
 				PG_TRY();
@@ -616,7 +736,9 @@ static bool const_record_walker(Node *node, pgssConstLocations *jstate)
 	return false;
 }
 
-PgQueryNormalizeResult pg_query_normalize_ext(const char* input, bool normalize_utility_only)
+PgQueryNormalizeResult pg_query_normalize_ext(
+    const char* input, bool normalize_query_only, bool normalize_utility_only
+)
 {
 	MemoryContext ctx = NULL;
 	PgQueryNormalizeResult result = {0};
@@ -648,6 +770,7 @@ PgQueryNormalizeResult pg_query_normalize_ext(const char* input, bool normalize_
 		jstate.param_refs_buf_size = 0;
 		jstate.param_refs_count = 0;
 		jstate.normalize_utility_only = normalize_utility_only;
+		jstate.normalize_query_only = normalize_query_only;
 
 		/* Walk tree and record const locations */
 		const_record_walker((Node *) tree, &jstate);
@@ -705,13 +828,13 @@ PgQueryNormalizeResult pg_query_normalize_ext(const char* input, bool normalize_
 
 PgQueryNormalizeResult pg_query_normalize(const char* input)
 {
-	return pg_query_normalize_ext(input, false);
+	return pg_query_normalize_ext(input, true, false);
 }
 
 
 PgQueryNormalizeResult pg_query_normalize_utility(const char* input)
 {
-	return pg_query_normalize_ext(input, true);
+	return pg_query_normalize_ext(input, false, true);
 }
 
 void pg_query_free_normalize_result(PgQueryNormalizeResult result)
