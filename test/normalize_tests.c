@@ -50,6 +50,8 @@ const char* tests[] = {
   "SELECT $1; ALTER USER a WITH PASSWORD 'b'",
   "SELECT U&'d!0061t!+000061' UESCAPE '!', -2147483647, -2147483648, x'beef', b'010101'",
   "SELECT $1, $2, $3, $4, $5",
+  "VALUES (1, NULL, 2)",
+  "VALUES ($1, NULL, $2)",
 };
 
 size_t testsLength = __LINE__ - 7;

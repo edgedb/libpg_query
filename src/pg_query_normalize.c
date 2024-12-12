@@ -160,6 +160,11 @@ fill_in_constant_lengths(pgssConstLocations *jstate, const char *query)
 			if (tok == 0)
 				break;			/* out of inner for-loop */
 
+            /* Ignore NULL constants */
+            if (tok == NULL_P) {
+                continue;
+            }
+
 			/*
 			 * We should find the token position exactly, but if we somehow
 			 * run past it, work with that.
@@ -213,15 +218,7 @@ fill_in_constant_lengths(pgssConstLocations *jstate, const char *query)
 
 					locs[i].val = (char *)palloc(buf_size * sizeof(char));
 					snprintf(locs[i].val, buf_size, "%d", val);
-				}
-				else if (tok == NULL_P)
-				{
-					/*
-					 * Do not extract NULL literals as those mess with
-					 * Postgres type inference.
-					 */
-					locs[i].length = -1;
-				}
+				}				
 
 				break;			/* out of inner for-loop */
 			}
@@ -399,6 +396,15 @@ static bool const_record_walker(Node *node, pgssConstLocations *jstate)
 	switch (nodeTag(node))
 	{
 		case T_A_Const:
+
+            /*
+             * Do not extract NULL constants as those mess with
+             * Postgres type inference.
+             */
+            if (castNode(A_Const, node)->isnull) {
+                return false;
+            }
+
 			RecordConstLocation(jstate, castNode(A_Const, node)->location);
 			break;
 		case T_ParamRef:
