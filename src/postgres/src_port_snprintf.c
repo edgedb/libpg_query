@@ -367,15 +367,18 @@ static void trailing_pad(int padlen, PrintfTarget *target);
  *
  * Note: glibc declares this as returning "char *", but that would require
  * casting away const internally, so we don't follow that detail.
+ *
+ * ... except that is what was breaking the build, so I changed it
+ *  -sully
  */
 #ifndef HAVE_STRCHRNUL
 
-static inline const char *
+static inline char *
 strchrnul(const char *s, int c)
 {
 	while (*s != '\0' && *s != c)
 		s++;
-	return s;
+	return (char *)s;
 }
 
 #else
